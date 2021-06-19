@@ -1,0 +1,172 @@
+<?php
+require_once(dirname(__FILE__).'/../_init/_session_start.php');
+require_once(dirname(__FILE__).'/../_init/_login_check.php');
+require_once(dirname(__FILE__).'/../_init/_sql_init.php');
+
+echo '<meta charset="utf-8"/>';
+
+echo '<link rel="stylesheet" href="table.css">';
+echo '<link rel="stylesheet" href="simple.css">';
+
+
+//科目読込
+$sql  = 'SELECT no,name,bunrui FROM kamoku WHERE 1 ORDER BY no ASC';
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+while ( $row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+	$kamoku[$row['no']]=$row['name'  ];
+	$bunrui[$row['no']]=$row['bunrui'];
+}
+
+//部門読込
+$sql  = 'SELECT no,name FROM bumon WHERE 1 ORDER BY no ASC';
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+while ( $row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+	$bumon [$row['no']]=$row['name'  ];
+	$bunrui[$row['no']]=$row['bunrui'];
+}
+
+
+//データセット
+$m1=$_GET['m1'];//開始期間 yymmdd
+$m2=$_GET['m2'];//終了期間 yymmdd
+$k=$_GET['k'];//科目 xxx
+$b1=$_GET['b1'];//開始部門 xxxxx
+$b2=$_GET['b2'];//終了部門 xxxxx
+
+echo '<form action="';
+echo (empty($_SERVER['HTTPS']) ? 'http://' : 'https://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+echo '" method="get">';
+
+//期間開始（m1）
+echo '期間：<select name="m1">';
+write_period($m1,'00');
+echo '</select>';
+
+//期間開始（m2）
+echo '～<select name="m2">';
+write_period($m2,'99');
+echo '</select><br>';
+
+/////////////////////////////
+// 選択用期間書出サブルーチン
+
+function write_period($m2,$end){
+	$y=14;$m=1;		// 開始年月
+	$y2=date('y')+1;	// 終了年
+	while($y<$y2){
+		while($m<13){
+			$i=sprintf('%02d',$y).sprintf('%02d',$m).$end;
+			echo'<option value="'.$i.'"';
+			if($m2==$i){echo' selected';}
+			echo'>'.floor($i/100).'</option>';
+			$m++;
+		}
+		$y++;$m=1;
+	}
+}
+////////////////////////////
+
+
+//科目（k）
+echo '科目：<select name="k">';
+foreach($kamoku as $key => $value){
+	echo'<option value="'.$key.'"';
+	if($k==$key){echo' selected';}
+	echo'>'.$key.' '.$value.'</option>';
+}
+echo '</select><br>';
+
+//部門 集計開始（b1）
+echo '部門：<select name="b1">';
+foreach($bumon as $key => $value){
+	echo'<option value="'.$key.'"';
+	if($b1==$key){echo' selected';}
+	echo'>'.$key.' '.$value.'</option>';
+}
+echo '</select>';
+
+//部門 集計終了（b2）
+echo '～<select name="b2">';
+	// 集計終了部門の検出（99を使っているため、keyが超えたところでselectedとする）
+	$BeforeBumon=0; $selected=0;
+foreach($bumon as $key => $value){
+	// Selectedしてなくて$keyが超えた場合（$b2で同じ値がなかった場合）
+	if($key>$b2 and $selected==0){$selected=1; echo' selected';}
+	// 前ターンの最後のHTMLを書き出す
+	echo $AfterWrite;
+	// 当ターンの判定
+	echo'<option value="'.$key.'"';
+	if($b2==$key){$selected=1; echo' selected';}else{$BeforeBumon=$key;}
+	$AfterWrite='>'.$key.' '.$value.'</option>'; // 次のターンで書くHTMLを変数へ格納
+}
+//最終ターン分の判定と書き出し
+if($selected==0){echo' selected';}
+echo $AfterWrite;
+echo '</select>';
+
+echo'<br><br></select><input type="submit"></form>';
+
+//期首残読込
+$i=($m1/100)-1;
+if(($i-(floor($i/100)*100))==0){$i=$i-100+12;}
+$i=$i*100+99;
+
+//kari zan
+$sql  = 'SELECT sum(kingaku) FROM shiwake WHERE kari='.$k.' and date<='.$i.' and bumon>='.$b1.' and bumon<='.$b2;
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+$row = mysql_fetch_array($result, MYSQL_ASSOC);
+$kari=$row['sum(kingaku)'];
+
+//kashi zan
+$sql  = 'SELECT sum(kingaku) FROM shiwake WHERE kashi='.$k.' and date<='.$i.' and bumon>='.$b1.' and bumon<='.$b2;
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+$row = mysql_fetch_array($result, MYSQL_ASSOC);
+$kashi=$row['sum(kingaku)'];
+
+//zan
+if($k<300 or ($k>=700 and $k<900) or ($k>=920 and $k<930)){$zan=$kari-$kashi;}else{$zan=$kashi-$kari;}
+
+//ヘッダー表示
+echo ' <a href="./"><--</a> ';
+echo '＜ 元帳 ＞<br>';
+echo '<table border=1 class="sample">';
+echo '<tr><td align="center">no<td align="center">日　付<td align="center">部　門<td align="center">相手科目<td align="center">借　方<td align="center">貸　方<td align="center">残　　高<td align="center">摘　　　要';
+
+//繰越残高表示
+echo '<tr><td align="right" colspan="6"> <td align="right">'.number_format($zan).'<td> ';
+
+$sql    = 'SELECT * FROM shiwake WHERE (kari='.$k.' or kashi='.$k.') and bumon>='.$b1.' and bumon<='.$b2;
+$sql   .= ' and date>'.$m1.' and date<'.$m2.' ORDER BY date,no ASC';
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+
+while ( $row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+	echo '<tr>';
+	echo '<td align="right">'.$row['no'   ];
+	echo '<td align="right">'.$row['date' ];
+
+	//部門表示
+	echo '<td>'.$bumon[$row['bumon']].'<'.$row['bumon'].'>';
+
+	//相手科目表示
+	echo '<td>';
+	if($k<>$row['kari' ]){echo $kamoku[$row['kari']].'<'.$row['kari'].'>';}else{echo $kamoku[$row['kashi']].'<'.$row['kashi'].'>';}
+
+	//借方金額表示
+	echo '<td align="right">';
+	if($k==$row['kari' ]){
+		echo number_format($row['kingaku']);
+		if($bunrui[$k]>1 and $bunrui[$k]<5){$zan-=$row['kingaku'];}else{$zan+=$row['kingaku'];}
+	}else{echo' ';}
+
+	//貸方金額表示
+	echo '<td align="right">';
+	if($k==$row['kashi']){
+		echo number_format($row['kingaku']);
+		if($bunrui[$k]>1 and $bunrui[$k]<5){$zan+=$row['kingaku'];}else{$zan-=$row['kingaku'];}
+	}else{echo' ';}
+
+	//残高表示
+	echo '<td align="right">'.number_format($zan);
+	echo '<td>'.$row['tekiyou'];
+
+}

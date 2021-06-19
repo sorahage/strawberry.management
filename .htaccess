@@ -1,0 +1,4 @@
+Options -Indexes
+ErrorDocument 404 http://strawberry.management/
+ErrorDocument 403 http://strawberry.management/
+ErrorDocument 500 http://strawberry.management/

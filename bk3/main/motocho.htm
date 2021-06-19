@@ -1,0 +1,221 @@
+<?php
+// --------------------------------------------------------|サブルーチン読込 |----
+require_once(dirname(__FILE__).'/../_init/_session_start.php');
+require_once(dirname(__FILE__).'/../_init/_login_check.php');
+require_once(dirname(__FILE__).'/../_init/_sql_init.php');
+require_once(dirname(__FILE__).'/_basic_data_read.php');	// 基本データ読込
+require_once(dirname(__FILE__).'/_write_period.php');     // 期間選択サブルーチン
+
+// --------------------------------------------------------| HTML 書き出し |-----
+?>
+<meta http-equiv="content-language" content="ja">
+<meta charset="utf-8"/>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<link rel="stylesheet" href="table.css">
+<link rel="stylesheet" href="simple.css">
+
+<?
+// --------------------------------------------------------| 選択フォームセット |--
+echo '<form action="';
+echo (empty($_SERVER['HTTPS']) ? 'http://' : 'https://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+echo '" method="get">';
+
+//期間選択
+echo '<a href="./"><<</a> 元帳｜</a>期間 ';
+write_period('m1',$m1,'00');
+echo '-';
+write_period('m2',$m2,'99');
+
+//科目（k）
+echo ' 科目 <select name="k">';
+foreach($kamoku as $key => $value){
+	echo'<option value="'.$key.'"';
+	if($k==$key){echo' selected';}
+	echo'>'.$key.' '.$value.'</option>';
+}
+echo '</select>';
+
+//部門 集計開始（b1）
+echo ' 部門 <select name="b1">';
+foreach($bumon as $key => $value){
+	echo'<option value="'.$key.'"';
+	if($b1==$key){echo' selected';}
+	echo'>'.$key.' '.$value.'</option>';
+}
+echo '</select>';
+
+//部門 集計終了（b2）
+echo '～<select name="b2">';
+	// 集計終了部門の検出（99を使っているため、keyが超えたところでselectedとする）
+	$BeforeBumon=0; $selected=0;
+foreach($bumon as $key => $value){
+	// Selectedしてなくて$keyが超えた場合（$b2で同じ値がなかった場合）
+	if($key>$b2 and $selected==0){$selected=1; echo' selected';}
+	// 前ターンの最後のHTMLを書き出す
+	echo $AfterWrite;
+	// 当ターンの判定
+	echo'<option value="'.$key.'"';
+	if($b2==$key){$selected=1; echo' selected';}else{$BeforeBumon=$key;}
+	$AfterWrite='>'.$key.' '.$value.'</option>'; // 次のターンで書くHTMLを変数へ格納
+}
+//最終ターン分の判定と書き出し
+if($selected==0){echo' selected';}
+echo $AfterWrite;
+echo '</select>';
+
+echo'</select> <input type="submit"></form>';
+
+// --------------------------------------------------------| 開始残高集計 |-------
+//期首残読込
+$i=($m1/100)-1;
+if(($i-(floor($i/100)*100))==0){$i=$i-100+12;}
+$i=$i*100+99;
+
+//借方残高集計
+$sql  = 'SELECT sum(kingaku) FROM shiwake WHERE kari='.$k.' and date<='.$i.' and bumon>='.$b1.' and bumon<='.$b2;
+$prepare =  $dbh -> prepare($sql);
+$prepare -> execute();
+$row = $prepare -> fetch();
+$kari=$row['sum(kingaku)'];
+
+//貸方残高集計
+$sql  = 'SELECT sum(kingaku) FROM shiwake WHERE kashi='.$k.' and date<='.$i.' and bumon>='.$b1.' and bumon<='.$b2;
+$prepare =  $dbh -> prepare($sql);
+$prepare -> execute();
+$row = $prepare -> fetch();
+$kashi=$row['sum(kingaku)'];
+
+//差引期首残高計算
+if($k<300 or ($k>=700 and $k<900) or ($k>=920 and $k<930)){$zan=$kari-$kashi;}else{$zan=$kashi-$kari;}
+
+// --------------------------------------------------------| 元帳タイトル表示 |----
+echo '<table border=1 class="sample">';
+echo '<tr><td align="center">no<td align="center">日　付<td align="center">部　門';
+echo '<td align="center">相手科目<td align="center">借　方<td align="center">貸　方';
+echo '<td align="center">残　　高<td align="center">摘　　　要';
+
+// --------------------------------------------------------| 繰越残高表示 |-------
+echo '<tr><td align="right" colspan="6"> <td align="right">'.number_format($zan).'<td> ';
+
+// --------------------------------------------------------| 元帳データ取得 |-----
+$sql    = 'SELECT * FROM shiwake WHERE (kari='.$k.' or kashi='.$k.') and bumon>='.$b1.' and bumon<='.$b2;
+$sql   .= ' and date>'.$m1.' and date<'.$m2.' ORDER BY date,no ASC';
+$prepare =  $dbh -> prepare($sql);
+$prepare -> execute();
+
+// --------------------------------------------------------| 元帳表示開始 |-------
+while ( $row = $prepare -> fetch() ) {
+	echo '<tr>';
+	echo '<td align="right"><font size="-2" color="gray">'.$row['no'   ];
+
+	//日付
+	echo '<td align="right"><div id="d'.$row['no'].'">'.$row['date'].'</div>';
+	echo '<input id="d'.$row['no'].'-edit" name="d'.$row['no'].'" size="6" style="display:none;"></input>';
+
+	//部門表示
+	echo '<td><div id="b'.$row['no'].'">'.'<font size=-1 color="gray">'.$row['bumon'].'</font> '.$bumon[$row['bumon']].'</div>';
+	echo '<select id="b'.$row['no'].'-edit" name="b'.$row['no'].'" style="display:none;">';
+	echo '<option>1</option><option>2</option></select>';
+
+	//相手科目表示
+	echo '<td>';
+	if($k<>$row['kari' ]){
+		echo '<font size=-1 color="gray">'.$row['kari' ].'</font> '.$kamoku[$row['kari' ]];
+	}else{
+		echo '<font size=-1 color="gray">'.$row['kashi'].'</font> '.$kamoku[$row['kashi']];
+	}
+
+	//借方金額表示
+	echo '<td align="right">';
+	if($k==$row['kari' ]){
+		echo number_format($row['kingaku']);
+		$karizan+=$row['kingaku'];
+		if($bunrui[$k]>1 and $bunrui[$k]<5){$zan-=$row['kingaku'];}else{$zan+=$row['kingaku'];}
+	}else{echo' ';}
+
+	//貸方金額表示
+	echo '<td align="right">';
+	if($k==$row['kashi']){
+		echo number_format($row['kingaku']);
+		$kasizan+=$row['kingaku'];
+		if($bunrui[$k]>1 and $bunrui[$k]<5){$zan+=$row['kingaku'];}else{$zan-=$row['kingaku'];}
+	}else{echo' ';}
+
+	//残高表示
+	echo '<td align="right">'.number_format($zan);
+
+	//摘要
+	echo '<td><div id="t'.$row['no'].'">'.$row['tekiyou'].'</div>';
+	echo '<input id="t'.$row['no'].'-edit" name="t'.$row['no'].'" size="40" style="display:none;"></input>';
+	if($tekimaxlen<strlen($row['tekiyou'])){$tekimaxlen=strlen($row['tekiyou']);} //摘要最大幅確認
+}
+
+// --------------------------------------------------------| 元帳最終行表示 |-----
+
+echo '<tr><td colspan="4" align="right"><b>合計';
+echo '<td align="right"><b>'.number_format($karizan);
+echo '<td align="right"><b>'.number_format($kasizan);
+echo '<td align="right"><b>'.number_format($zan    );
+echo '<td> ';
+
+// --------------------------------------------------------| script |-----------
+$prepare =  $dbh -> prepare($sql);
+$prepare -> execute();
+
+echo'<script type="text/javascript">';
+
+while ( $row = $prepare -> fetch() ) {
+	echo <<<EOM
+
+		//日付
+		$('#d{$row['no']}').click(function() {
+		    $('#d{$row['no']}').css( 'display', 'none');
+		    $('#d{$row['no']}-edit')
+		        .val( $( '#d{$row['no']}').text())
+		        .css( 'display', '')
+		        .focus();
+		});
+		$('#d{$row['no']}-edit').blur(function() {
+		    $('#d{$row['no']}-edit').css( 'display', 'none');
+		    $('#d{$row['no']}')
+		        .text($('#d{$row['no']}-edit').val())
+		        .css( 'display', '');
+		});
+
+
+		//部門
+		$('#b{$row['no']}').click(function() {
+		    $('#b{$row['no']}').css( 'display', 'none');
+		    $('#b{$row['no']}-edit')
+		        .val( $( '#b{$row['no']}').text())
+		        .css( 'display', '')
+		        .focus();
+		});
+		$('#b{$row['no']}-edit').blur(function() {
+		    $('#b{$row['no']}-edit').css( 'display', 'none');
+		    $('#b{$row['no']}')
+		        .text($('#b{$row['no']}-edit').val())
+		        .css( 'display', '');
+		});
+
+
+		//摘要
+		$('#t{$row['no']}').click(function() {
+		    $('#t{$row['no']}').css( 'display', 'none');
+		    $('#t{$row['no']}-edit')
+		        .val( $( '#t{$row['no']}').text())
+		        .css( 'display', '')
+		        .focus();
+		});
+		$('#t{$row['no']}-edit').blur(function() {
+		    $('#t{$row['no']}-edit').css( 'display', 'none');
+		    $('#t{$row['no']}')
+		        .text($('#t{$row['no']}-edit').val())
+		        .css( 'display', '');
+		});
+
+EOM;
+}
+echo'</script>';
+
+?>

@@ -1,0 +1,57 @@
+<html><head></head><body><br/>
+<font size="7" color="red"><center>
+test</center></font><br/>
+
+<form action ="<?php echo $_SERVER["REQUEST_URI"]; ?>" method = ¡Èget¡É>
+
+¼ÒÌ¾<input type="text" name=syamei value="<?= $_GET['syamei']; ?>">
+Í¹ÊØ<input type="text" name=yuubin value="<?= $_GET['yuubin']; ?>">
+
+½»½ê<input type="text" name=zyuusyo value="<?= $_GET['zyuusyo']; ?>">
+¥á¡¼¥ë<input type="text" name=mail value="<?= $_GET['mail']; ?>">
+ÅÅÏÃ<input type="text" name=tel value="<?= $_GET['tel']; ?>">  <br>
+
+À«¡¡<input type="text" name=myoji value="<?= $_GET['myoji']; ?>">
+Ì¾¡¡<input type="text" name=namae value="<?= $_GET['namae']; ?>"> <br>
+±ÑÀ«<input type="text" name=emyoji value="<?= $_GET['emyoji']; ?>">
+±ÑÌ¾<input type="text" name=enamae value="<?= $_GET['enamae']; ?>">
+<input type="submit" name=action value="Á÷¿®"; ?>
+
+<table bgcolor="black" width="350">
+  <tr style="color:white">
+    <td align="right" height="50" width="50">
+      <div style="border-style: solid ; border-width: 1px;padding: 5px 5px 5px 5px; border-color: white">
+        <font size="8">
+       KI
+        </font>
+      </div>
+    </td>
+    <td height="100" width="300" align="middle">
+     <?php echo $_GET['syamei']; ?>
+    </td>
+  </tr>
+</table>
+ <table bgcolor="black" width="350">
+  <tr style="color:white">
+    <td align="middle" width="160">
+      <font size="4">
+        <?php echo $_GET['myoji']; ?> &nbsp; <?php echo $_GET['namae']; ?><br>
+      <font size="1">
+        <?php echo $_GET['emyoji']; ?> &nbsp;&nbsp;&nbsp;&nbsp;
+        <?php echo $_GET['enamae']; ?> &nbsp;&nbsp;
+      </font>
+    </td>
+
+    <td height="80">
+      <font size="1.8">
+        <span style="line-height:150%">
+         ¢©<?php echo $_GET['yuubin']; ?><br>
+         <?php echo $_GET['zyuusyo']; ?><br>
+         <?php echo $_GET['mail']; ?><br>
+         <strong><?php echo $_GET['tel']; ?></strong>
+        </span>
+      </font>
+    </td>
+  </tr>
+ </table>		
+		

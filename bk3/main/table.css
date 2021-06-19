@@ -1,0 +1,29 @@
+@charset "UTF-8";
+
+// table.css
+// 行ごとにグレー表示にする
+
+table tr:nth-child(odd) td {
+	background: #fff;
+}
+	
+table tr:nth-child(even) td {
+//	background: #f9f9f9;
+}
+
+
+table tr:nth-child(5n+6) td {
+	border-bottom: 2px solid #ccc;
+}
+
+table tr:hover td{
+	background: #fdfbe0;
+}
+
+table td:empty{
+	text-align: center !important;
+}
+
+table td:empty:before{
+	content:"-";
+}

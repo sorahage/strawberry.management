@@ -1,0 +1,122 @@
+<?php
+// --------------------------------------------------------|サブルーチン読込 |----
+require_once(dirname(__FILE__).'/../_init/_session_start.php');
+require_once(dirname(__FILE__).'/../_init/_login_check.php');
+require_once(dirname(__FILE__).'/../_init/_sql_init.php');
+require_once(dirname(__FILE__).'/_read_subdep.php');			// 科目・部門を読込
+
+// --------------------------------------------------------| データセット |-------
+$bmn		= $_GET['bumon'	];
+$name		= $_GET['name'	];
+//$date 		= $_GET['date'		];
+$date 		= '0000-00-00';
+$kari			= $_GET['kari'		];
+$kashi		= $_GET['kashi'	];
+$kingaku	= $_GET['kingaku'];
+$tekiyou		= $_GET['tekiyou'	];
+
+// --------------------------------------------------------| HTML 書き出し |-----
+echo '<meta charset="utf-8"/>';
+echo '<link rel="stylesheet" href="table.css">';
+echo '<link rel="stylesheet" href="simple.css">';
+echo '<style>a{text-decoration: none;}</style>';
+echo '<a href="./"><<</a> '; // ホームリンク
+
+// 登録チェック＞データ未完成の場合
+if($kari==0 and $kashi==0 and $kingaku<1 and $tekiyou==''){echo 'データ入力中';
+
+
+echo '<form action="';
+echo (empty($_SERVER['HTTPS']) ? 'http://' : 'https://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+echo '" method="get">';
+
+echo '＜定型仕訳登録＞<br>';
+
+//定型名
+echo '定型名 <input type="text" size="24" name="name"';
+if($name<>''){echo ' value="'.$name.'"';}
+echo '><br>';
+
+//部門選択
+echo '部門 <select name="bumon">';
+foreach($bumon as $key => $value){
+	echo '<option value="'.$key.'"';
+	if($key==$bmn){echo ' selected';}
+	echo '>'.$key.' '.$value.'</option>';
+}
+echo '</select><br>';
+
+//日付
+//echo '日付 <input type="date" size="6" name="date" ';
+//if($date==''){$date=date('Y').'-'.date('m').'-'.date('d');}
+//echo 'value="'.$date.'"><br>';
+
+//借方
+echo '借方 <select name="kari">';
+foreach($kamoku as $key => $value){
+	echo '<option value="'.$key.'"';
+	if($key==$kari){echo ' selected';}
+	echo '>'.$key.' '.$value.'</option>';
+}
+echo '</select><br>';
+
+//貸方
+echo '貸方 <select name="kashi">';
+foreach($kamoku as $key => $value){
+	echo '<option value="'.$key.'"';
+	if($key==$kashi){echo ' selected';}
+	echo '>'.$key.' '.$value.'</option>';
+}
+echo '</select><br>';
+
+//金額
+echo '金額 <input type="text" size="7" name="kingaku" value="';
+if($kingaku<>'' or $kingaku>0){echo $kingaku;}else{echo '0';}
+echo '" style="text-align: right; "><br>';
+
+//摘要
+echo '摘要 <input type="text" size="24" name="tekiyou"';
+if($tekiyou<>''){echo ' value="'.$tekiyou.'"';}
+echo '><br>';
+
+//登録
+echo '<br><input type="submit" value="登録"><br>';
+
+
+
+}else{
+
+echo'o登録<br>';
+
+// 日付変換
+$date=str_replace( '-', '', $date);			// ハイフンを除く
+$date=substr($date,2,6);	// 右から6文字を抜き出す
+
+$sql  = 'INSERT INTO teikei ';
+$sql .= '( name,bumon,date,kari,kashi,kingaku,tekiyou,chk )';
+$sql .= "values ( '$name',$bmn , $date , $kari , $kashi , $kingaku , '$tekiyou' , 0 )";
+$prepare =  $dbh -> prepare($sql);
+$prepare -> execute();
+
+// 登録データ書出
+echo '<table border=1 class="sample">';
+echo '<tr>';
+echo '<th bgcolor="lightgray" align="center">定型名';
+echo '<th bgcolor="lightgray" align="center">部門';
+echo '<th bgcolor="lightgray" align="center">日付';
+echo '<th bgcolor="lightgray" align="center">借方';
+echo '<th bgcolor="lightgray" align="center">貸方';
+echo '<th bgcolor="lightgray" align="center">金額';
+echo '<th bgcolor="lightgray" align="center">摘要';
+
+echo '<tr>';
+echo '<td>'.$name;
+echo '<td>'.$bmn.' '.$bumon[$bmn];
+echo '<td>'.$date;
+echo '<td>'.$kari.' '.$kamoku[$kari];
+echo '<td>'.$kashi.' '.$kamoku[$kashi];
+echo '<td>'.$kingaku;
+echo '<td>'.$tekiyou;
+
+echo '</table><a href="./teikei.htm">定型追加';
+}

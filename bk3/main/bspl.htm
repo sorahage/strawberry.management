@@ -1,0 +1,323 @@
+<?php
+$time1 = microtime(true);																									//処理時間計測ー0
+// --------------------------------------------------------|サブルーチン読込 |----
+require_once(dirname(__FILE__).'/../_init/_session_start.php');
+require_once(dirname(__FILE__).'/../_init/_login_check.php');
+require_once(dirname(__FILE__).'/../_init/_sql_init.php');
+require_once(dirname(__FILE__).'/_basic_data_read.php');	// 基本データ読込
+require_once(dirname(__FILE__).'/_write_period.php');     // 期間選択サブルーチン
+require_once(dirname(__FILE__).'/_gyo.php');							// 行書き出しサブルーチン
+
+// --------------------------------------------------------| HTML 書き出し |-----
+?>
+<meta http-equiv="content-language" content="ja">
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_table_fix.css">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script type="text/javascript" src="_table.js"></script>
+
+
+<?
+// --------------------------------------------------------| 選択フォームセット |--
+  echo '<div id="select"><form name="sct" action="';
+  echo (empty($_SERVER['HTTPS']) ? 'http://' : 'https://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+  echo '" method="get">';
+
+	echo '<a href="./"><<</a> '; // ホームリンク
+  echo '| 試算表 | 期間 ';
+
+  //期間選択
+  write_period('m1',$m1,'00');
+  echo '-';
+  write_period('m2',$m2,'99');
+?>
+<script>
+function scng(event){
+    const m1 = document.sct.m1.value;
+    const m2 = document.sct.m2.value;
+    //const a  = float(m1/100)*100+99;
+    print(m1);
+    //$("#m2 option[value=a]").attr("selected", "selected");}
+</script>
+
+<?
+  //分類（k）
+  echo '部門<select name="k">';
+  echo '<option value="0" ';if($k==0){echo'selected';}echo'>全体</option>';
+  echo '<option value="1" ';if($k==1){echo'selected';}echo'>会社</option>';
+  echo '<option value="2" ';if($k==2){echo'selected';}echo'>部門</option>';
+  echo '<option value="3" ';if($k==3){echo'selected';}echo'>詳細</option>';
+	echo '</select>｜';
+
+  //部門 集計開始（b1）
+  echo '<select name="b1">';
+  foreach($bumon as $key => $value){
+  	echo'<option value="'.$key.'"';
+  	if($b1==$key){echo' selected';}
+  	echo'>'.$key.' '.$value.'</option>';
+  }
+  echo '</select>';
+
+  //部門 集計終了（b2）
+  echo '～<select name="b2">';
+  foreach($bumon as $key => $value){
+  	echo'<option value="'.$key.'"';
+  	if($b2==$key){echo' selected';}
+  	echo'>'.$key.' '.$value.'</option>';
+  }
+  echo '</select>';
+
+  echo'｜<input type="submit"></form>';
+
+
+
+  //タイトル表示
+	echo '<p id="time">time</p>';
+?>
+
+<div id="zentai" style="position:relative;">
+<table class=t  style="width:180px;position:absolute;left:0px;top:0px;">
+<tr><th>科目＼部門</th></tr> <!-- 固定ヘッダ -->
+</table>
+
+<div id="header_h">
+<table class=t name="T"> <!-- 水平ヘッダ -->
+<tr>
+<?
+  //部門名書出し
+  foreach($bumon as $bkey => $bvalue){
+
+  	//部門表示確認
+  	if($bkey>=$b1 and $bkey<=$b2){
+
+  		//大分類選択の場合
+  		if($k==0){if($bkey<>(floor($bkey/10000)*10000)){continue;}}
+
+  		//中分類選択の場合
+  		if($k==1){if($bkey<>(floor($bkey/1000)*1000)){continue;}}
+
+  		//小分類選択の場合
+  		if($k==2){if($bkey<>(floor($bkey/100)*100)){continue;}}
+  	}else{continue;}
+
+  	echo '<th style="font-weight: 200;">'.$bkey.' '.$bvalue.'</th>';
+  }
+
+  echo '<th align="center">合　　計';
+
+?>
+
+
+</tr>
+</table>
+</div>
+
+<div id="header_v">
+<table class=t name="TV"> <!-- 垂直ヘッダ -->
+
+<?
+  //科目繰返し
+  foreach ($kamoku as $kkey => $kvalue) {
+
+
+  	//現預金計 表示
+  	if($kkey>150 and $bkkey<150){
+  		echo '<tr><th align="right" style="background-color:silver;"><b>現預金計';
+  	}
+
+  	//固定資産計 表示
+  	if($kkey>229 and $bkkey<229){
+  		echo '<tr><th align="right" style="background-color:silver;"><b>固定資産計';
+  	}
+
+  	//資産計 表示
+  	if($kkey>300 and $bkkey<300){
+  		echo '<tr><th align="right" style="background-color:silver;"><b>資産計';
+  	}
+
+  	//負債計 表示
+  	if($kkey>400 and $bkkey<400){
+  		echo '<tr><th align="right" style="background-color:silver;"><b>負債計';
+  	}
+
+  	//資本計 表示
+  	if($kkey>600 and $bkkey<600){
+  		echo '<tr><th align="right" style="background-color:silver;"><b>資本計';
+  		echo '<tr><th align="right" style="background-color:darkgray;"><b>当期利益';
+  		echo '<tr><th align="right" style="background-color:silver;"><b>負債資本計';
+  	}
+
+  	//費用計 表示
+  	if($kkey>900 and $bkkey<900){
+  		echo '<tr><th align="right" style="background-color:silver;"><b>費用計';
+  	}
+
+  	//科目名書出し
+  	echo '<tr><th align="left" style="font-weight: 200;"><font color="silver">'.sprintf("%03d", $kkey).' <font color="black">';
+  	echo'<a href="motocho.htm?';
+  	echo "m1=$m1&m2=$m2&k=$kkey&b1=0&b2=".$bumon_end_key;
+  	echo '" target="new">'.$kvalue;
+
+  	$bkkey=$kkey;
+  }
+
+  //損益から計算した利益を表示
+  echo'<tr><th align="right" style="background-color:darkgray;"><b>当期利益';
+
+  //貸借があっているかどうかを表示
+  echo'<tr><th align="right"><b>照合';
+?>
+
+</table>
+</div>
+
+<? /* ---------- データ部分 書き出し ---------- */ ?>
+<div id="data">
+<table class=t name="T">
+
+<?
+  //科目繰返し
+  foreach ($kamoku as $kkey => $kvalue) {
+
+  	//現預金計 表示
+  	if($kkey>150 and $bkkey<150){
+      echo '<tr>';
+  		$kkey1=111;
+  		$kkey2=149;
+  		gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+  	}
+
+  	//固定資産計 表示
+  	if($kkey>229 and $bkkey<229){
+      echo '<tr>';
+  		$kkey1=211;
+  		$kkey2=229;
+  		gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+  	}
+
+  	//資産計 表示
+  	if($kkey>300 and $bkkey<300){
+      echo '<tr>';
+  		$kkey1=0;
+  		$kkey2=299;
+  		$sisan=gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+  	}
+
+  	//負債計 表示
+  	if($kkey>400 and $bkkey<400){
+      echo '<tr>';
+  		$kkey1=311;
+  		$kkey2=399;
+  		$fusai=gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+  	}
+
+  	//資本計 表示
+  	if($kkey>600 and $bkkey<600){
+      echo '<tr>';
+  		$kkey1=411;
+  		$kkey2=499;
+  		$sihon=gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+
+      //当期利益表示
+      echo '<tr>';
+  		$gokei=0;
+  		foreach($fusai as $key => $value){
+  			$rieki[$key]=$sisan[$key]-$fusai[$key]-$sihon[$key];
+  			echo '<td align="right" style="background-color:silver;font-weight:bold;">'.number_format($rieki[$key]);
+  			$gokei+=$rieki[$key];
+  		}
+  		echo '<td align="right" style="background-color:silver;font-weight:bold;">'.number_format($gokei);
+
+      //負債資本計表示
+      echo '<tr>';
+  		$gokei=0;
+  		foreach($fusai as $key => $value){
+  			$kei=$fusai[$key]+$sihon[$key]+$rieki[$key];
+  			echo '<td align="right" style="background-color:lightgray;font-weight:bold;">'.number_format($kei);
+  			$gokei+=$kei;
+  		}
+  		echo '<td align="right" style="background-color:lightgray;font-weight:bold;">'.number_format($gokei);
+
+  	}
+
+  	//費用計 表示
+  	if($kkey>900 and $bkkey<900){
+      echo '<tr>';
+  		$kkey1=700;
+  		$kkey2=899;
+  		gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+  	}
+
+  	//科目名書出し
+    echo '<tr>';
+  	$kkey1=$kkey;
+  	$kkey2=$kkey;
+  	$rkei=gyo($m1,$m2,$k,$b1,$b2,$kkey1,$kkey2);
+
+  	//損益科目集計（利益を算出）
+  	if($kkey1>=600 and $kkey1<=999){
+  		foreach($rkei as $key => $value){
+  			if($bunrui[$kkey1]==4){
+  				$rieki2[$key]+=$rkei[$key];
+  			}else{
+  				$rieki2[$key]-=$rkei[$key];
+  			}
+  		}
+  	}
+
+  	$bkkey=$kkey;
+  }
+
+  //損益から計算した当期利益を表示
+  echo '<tr>';
+  $gokei=0;
+  foreach($rkei as $key => $value){
+  	echo '<td align="right" style="background-color:silver;font-weight:bold;">'.number_format($rieki2[$key]);
+  	$gokei+=$rieki2[$key];
+  }
+  echo '<td align="right" style="background-color:silver;font-weight:bold;">'.number_format($gokei);
+
+  //貸借があっているかどうかを表示
+  echo '<tr>';
+  $syogo_count=0;
+  $syogo_kei  =0;
+  foreach($rkei as $key => $value){
+  	if($rieki[$key]==$rieki2[$key]){
+  		echo '<td align="center"><b><font color="blue">ok<font color="black">';
+  	} else {
+      $syogo=$rieki[$key]-$rieki2[$key];
+  		echo '<td align="center"><b><font color="red">'.($syogo).'<font color="black">';
+      $syogo_count++;
+      $syogo_kei+=$syogo;
+  	}
+  }
+  echo '<td align="center"><b>';
+  if($syogo_count){
+    echo'<font size="-2" color="red">'.$syogo_count.'件|'.$syogo_kei;
+  }else{
+    echo'<font color="blue">all ok';
+  }
+  echo '<font color="black"></b>';
+?>
+
+
+</table>
+</div>
+
+</div>
+<script type="text/javascript">
+function $E(name){ return document.getElementById(name); }
+function scroll(){
+   $E("header_h").scrollLeft= $E("data").scrollLeft;// データ部のスクロールをヘッダに反映
+   $E("header_v").scrollTop = $E("data").scrollTop;// データ部のスクロールをヘッダに反映
+   }
+$E("data").onscroll=scroll;
+</script>
+
+<?
+$time2 = microtime(true);
+$a=$time2-$time1;																								//処理時間計測ー1
+?>
+<script language="javascript" type="text/javascript">
+document.getElementById('time').innerHTML = "<p><?=$a?></p>";
+</script>

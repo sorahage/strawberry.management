@@ -1,0 +1,24 @@
+<?php
+  require_once("./phpQuery-onefile.php");
+
+  $url='https://www.marutsu.co.jp/pc/i/1320453/';
+  $html = file_get_contents($url);
+  echo 'マルツ｜<a href="'.$url.'">Raspberry Pi Zero WH</a>｜';
+  echo phpQuery::newDocument($html)->find("#deliveryPlanDateSurround")->find("dl")->text();
+  echo '<br>';
+
+  $url='https://www.marutsu.co.jp/pc/i/1320453/';
+  $html = file_get_contents($url);
+  echo 'マルツ：<a href="'.$url.'">Raspberry Pi Zero WH</a>';
+  echo phpQuery::newDocument($html)->find("#deliveryPlanDateSurround")->find("dl")->text();
+  echo '<br>';
+
+  //$html = file_get_contents("https://www.marutsu.co.jp/pc/i/1525101/");
+  //echo phpQuery::newDocument($html)->find("#relatedStockNumSurround")->text();
+  //echo phpQuery::newDocument($html)->find("#deliveryPlanDateSurround")->find("dl")->text();
+
+  //relatedStockNumSurround
+  //echo phpQuery::newDocument($html)->find("dl")->text();
+
+  //phpinfo();
+?>

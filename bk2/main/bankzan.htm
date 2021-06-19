@@ -1,0 +1,148 @@
+<?php
+require_once(dirname(__FILE__).'/../_init/_session_start.php');
+require_once(dirname(__FILE__).'/../_init/_login_check.php');
+require_once(dirname(__FILE__).'/../_init/_sql_init.php');
+
+echo '<meta charset="utf-8"/>';
+
+echo '<link rel="stylesheet" href="table.css">';
+echo '<link rel="stylesheet" href="simple.css">';
+echo '<style>a{text-decoration: none;}</style>';
+
+
+//科目読込
+$sql  = 'SELECT no,name,bunrui FROM kamoku WHERE 1 ORDER BY no ASC';
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+while ( $row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+	$kamoku[$row['no']]=$row['name'  ];
+	$bunrui[$row['no']]=$row['bunrui'];
+}
+
+//部門読込
+$sql  = 'SELECT no,name FROM bumon WHERE 1 ORDER BY no ASC';
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+while ( $row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+	$bumon[$row['no']]=$row['name'  ];
+}
+end($bumon);
+$bumon_end_key=key($bumon);
+reset($bumon);
+
+
+
+//データセット
+$m1=$_GET['m1'];//開始期間 yymmdd
+$m2=$_GET['m2'];//終了期間 yymmdd
+$k=$_GET['k'];//科目 xxx
+$b1=$_GET['b1'];//開始部門 xxxxx
+$b2=$_GET['b2'];//終了部門 xxxxx
+
+echo '<form action="';
+echo (empty($_SERVER['HTTPS']) ? 'http://' : 'https://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+echo '" method="get">';
+
+//期間開始（m1）
+echo '期間：<select name="m1">';
+write_period($m1);
+echo '</select>';
+
+//期間開始（m2）
+echo '～<select name="m2">';
+write_period($m2);
+echo '</select><br>';
+
+/////////////////////////////
+// 選択用期間書出サブルーチン
+
+function write_period($m2){
+	$y=14;$m=1;		// 開始年月
+	$y2=date('y')+1;	// 終了年
+	while($y<$y2){
+		while($m<13){
+			$i=sprintf('%02d',$y).sprintf('%02d',$m).'00';
+			echo'<option value="'.$i.'"';
+			if($m2==$i){echo' selected';}
+			echo'>'.floor($i/100).'</option>';
+			$m++;
+		}
+		$y++;$m=1;
+	}
+}
+////////////////////////////
+
+
+
+echo'<br><br></select><input type="submit"></form>';
+
+
+// タイトル行書出し
+echo ' <a href="./"><--</a> ';
+echo '＜ 現金預金残高推移 ＞<br>';
+echo '<table border=1 class="sample">';
+echo '<tr><td align="center">年月';
+foreach($kamoku as $key => $value){
+	if($key<>0){	// 諸口を飛ばす
+		if($key>=150){break;}	// 現預金だけを表示
+		echo'<td align="center"><font size="-1" color="gray">'.sprintf("%03d", $key);
+		echo'<br><font color="black">'.$value;
+	}
+}
+echo'<td align="center"><b>合　計<td align="center">増　減';
+
+
+// 毎月書出し
+
+$i  =$m1+99;
+$m2+=    99;
+$zenkei=0  ;
+
+while($i<=$m2){
+
+	$nengetu=floor($i/100)/100;
+	echo'<tr><td align="right">'.preg_replace("/^(\d{2})(\d{2})(\d{2})$/", "$1.$2", $i);
+
+	foreach($kamoku as $key => $value){
+		if($key<>0){	// 諸口を飛ばす
+			if($key>=150){break;}	// 現預金だけを表示
+
+			//kari zan
+			$sql  = 'SELECT sum(kingaku) FROM shiwake WHERE kari='.$key.' and date<='.$i;
+			$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+			$row = mysql_fetch_array($result, MYSQL_ASSOC);
+			$kari=$row['sum(kingaku)'];
+
+			//kashi zan
+			$sql  = 'SELECT sum(kingaku) FROM shiwake WHERE kashi='.$key.' and date<='.$i;
+			$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+			$row = mysql_fetch_array($result, MYSQL_ASSOC);
+			$kashi=$row['sum(kingaku)'];
+
+			//zan
+			$zan =$kari-$kashi;	// 科目残計算
+			$kei+=$zan;		// 総合計計算
+
+			// 科目残書出し
+			$kaisi =$i-99;
+			$syuryo=$i;
+			echo'<td align="right">';
+			echo'<a href="motocho.htm?';
+			echo "m1=$kaisi&m2=$syuryo&k=$key&b1=0&b2=".$bumon_end_key;
+			echo '">'.number_format($zan);
+		}
+	}
+
+	// 月毎の合計金額書き出し
+	echo'<td align="right"><b>'.number_format($kei);
+	$zougen=$kei-$zenkei;
+	if($i<>($m1+99)){
+		echo'<td align="right">';
+		if($zougen>0){echo'<font color="blue">';}else{echo'<font color="red">';}
+		echo number_format($zougen);
+	}else{
+		echo'<td align="center">-';
+	}
+	$zenkei=$kei;
+	$kei=0; // 合計リセット
+	$i+=100;// 翌月へポインタを移動
+	if(($i-floor($i/10000)*10000)>1299){$i+=8800;}	//12月の翌月を1月にする修正
+}

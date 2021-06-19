@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <select name="genre" id="genre" onchange="createMenu(this.value)">
+    <option disabled selected>ジャンルを選択してください</option>
+    <option value="japaneseFoods">和食</option>
+    <option value="chineseFoods">中華</option>
+    <option value="italianFoods">イタリアン</option>
+  </select>
+  <select name="menuList" id="menuList" disabled>
+    <option disabled selected>料理を選択してください</option>
+  </select>
+</body>
+</html>
+
+<script language="javascript" type="text/javascript">
+const foodMenu =
+      {
+        "japaneseFoods": ["寿司", "天ぷら", "おでん"],
+        "chineseFoods": ["八宝菜", "麻婆豆腐", "エビチリ"],
+        "italianFoods": ["パスタ", "ピザ", "ミネストローネ"]
+      };
+
+
+function createMenu(selectGenre){
+
+  let menuList = document.getElementById('menuList');
+  menuList.disabled = false;
+  menuList.innerHTML = '';
+  let option = document.createElement('option');
+  option.innerHTML = '料理を選択してください';
+  option.defaultSelected = true;
+  option.disabled = true;
+  menuList.appendChild(option);
+
+  foodMenu[selectGenre].forEach( menu => {
+    let option = document.createElement('option');
+    option.innerHTML = menu;
+    menuList.appendChild(option);
+  });
+}
+</script>

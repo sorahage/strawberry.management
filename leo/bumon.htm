@@ -1,0 +1,23 @@
+<?php
+require_once(dirname(__FILE__).'/sql_init.php');
+
+echo '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+
+//部門読込
+$sql  = 'SELECT no,name FROM bumon WHERE 1 ORDER BY no ASC';
+$result = mysql_query($sql, $link) or die("クエリの送信に失敗しました。<br />SQL:".$sql);
+while ( $row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+	$bumon[$row['no']]=$row['name'  ];
+}
+end($bumon);
+$bumon_end_key=key($bumon);
+reset($bumon);
+
+foreach($bumon as $key => $value){
+  echo $key." ".$value.'<br>';
+}
+
+
+
+?>
+	
