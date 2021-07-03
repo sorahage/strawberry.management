@@ -1,0 +1,22 @@
+<?php
+// ライブラリ読み込み
+require_once "phpqrcode/qrlib.php";
+
+// URLを定数に設定
+$url = 'create_qr.php?data='.$_GET['data'];
+?>
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR</title>
+</head>
+<body>
+    <h2>QRコード</h2>
+    <img src="<?php echo $url ?>" />
+    <br>
+    <a href="index">戻る</a>
+</body>
+</html>
